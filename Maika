@@ -363,48 +363,78 @@ end)
 
 -- Main Tab: Toggle ESP
 local espEnabled = false
+
 MainTab:AddToggle({
     Name = "Toggle ESP",
     Default = false,
     Callback = function(state)
         espEnabled = state
+        
         if espEnabled then
-            OrionLib:MakeNotification({
-                Name = "Toggle ESP",
-                Content = "ESP Enabled",
-                Image = "rbxassetid://4483345998",
-                Time = 5
-            })
-            spawn(function()
+            task.spawn(function()
                 while espEnabled do
                     for _, p in pairs(game.Players:GetPlayers()) do
-                        if p ~= game.Players.LocalPlayer and p.Character and not p.Character:FindFirstChild("ESPBox") then
-                            local box = Instance.new("BoxHandleAdornment")
-                            box.Name = "ESPBox"
-                            box.Adornee = p.Character
-                            box.Size = Vector3.new(4, 6, 4)
+                        if p ~= game.Players.LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                            local char = p.Character
+                            local head = char.Head
+                            local humanoid = char:FindFirstChildOfClass("Humanoid")
+                            local box = char:FindFirstChild("ESPBox")
+                            if not box then
+                                box = Instance.new("BoxHandleAdornment")
+                                box.Name = "ESPBox"
+                                box.Adornee = char
+                                box.Size = Vector3.new(4, 6, 4)
+                                box.AlwaysOnTop = true
+                                box.ZIndex = 10
+                                box.Transparency = 0.5
+                                box.Parent = char
+                            end
                             box.Color3 = p.TeamColor.Color
-                            box.AlwaysOnTop = true
-                            box.ZIndex = 10
-                            box.Transparency = 0.5
-                            box.Parent = p.Character
+                            local billboard = head:FindFirstChild("ESPNameTag")
+                            local label
+                            
+                            if not billboard then
+                                billboard = Instance.new("BillboardGui")
+                                billboard.Name = "ESPNameTag"
+                                billboard.Size = UDim2.new(0, 200, 0, 50)
+                                billboard.StudsOffset = Vector3.new(0, 3, 0)
+                                billboard.AlwaysOnTop = true
+                                billboard.Parent = head
+
+                                label = Instance.new("TextLabel")
+                                label.Name = "TagLabel"
+                                label.Size = UDim2.new(1, 0, 1, 0)
+                                label.BackgroundTransparency = 1
+                                label.TextScaled = true
+                                label.Font = Enum.Font.SourceSansBold
+                                label.TextColor3 = Color3.new(1, 1, 1)
+                                label.TextStrokeTransparency = 0 
+                                label.TextStrokeColor3 = Color3.new(0, 0, 0)
+                                label.Parent = billboard
+                            else
+                                label = billboard:FindFirstChild("TagLabel")
+                            end
+                            if label then
+                                local hp = humanoid and math.floor(humanoid.Health) or 0
+                                local team = p.Team and p.Team.Name or "NoTeam"
+                                label.Text = string.format("Name: %s (%s)\nHP: %d", p.Name, team, hp)
+                            end
                         end
                     end
-                    wait(0.5)
+                    task.wait(1)
                 end
             end)
         else
             for _, p in pairs(game.Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("ESPBox") then
-                    p.Character.ESPBox:Destroy()
+                if p.Character then
+                    if p.Character:FindFirstChild("ESPBox") then
+                        p.Character.ESPBox:Destroy()
+                    end
+                    if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESPNameTag") then
+                        p.Character.Head.ESPNameTag:Destroy()
+                    end
                 end
             end
-            OrionLib:MakeNotification({
-                Name = "Toggle ESP",
-                Content = "ESP Disabled",
-                Image = "rbxassetid://4483345998",
-                Time = 5
-            })
         end
     end
 })
@@ -435,11 +465,6 @@ SurvivorTab:AddToggle({
                 end
 
                 if not sprintModule then
-                    OrionLib:MakeNotification({
-                        Name = "Infinite Stamina",
-                        Content = "Sprint module not found",
-                        Time = 3
-                    })
                     return
                 end
 
@@ -448,11 +473,9 @@ SurvivorTab:AddToggle({
                         sprintModule.Current.Value =
                             sprintModule.SprintStats.Stamina.Max
                     end)
-
                     task.wait(1)
                 end
             end)
-            })
         end
     end
 })
