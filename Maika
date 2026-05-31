@@ -1,0 +1,461 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/SoocusMoocus/AlphaGui/refs/heads/main/OrionLoader')))()
+
+local Window = OrionLib:MakeWindow({
+    Name = "Alpha Gui V8",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "AlphaGuiV8"
+})
+
+local InfoTab = Window:MakeTab({
+    Name = "Info",
+    Icon = "rbxassetid://1",
+    PremiumOnly = false
+})
+
+local Section = InfoTab:AddSection({
+    Name = "Info"
+})
+
+local playerName = game.Players.LocalPlayer.Name
+
+InfoTab:AddButton({
+    Name = "Welcome " .. playerName .. "! This is best script for bear alpha!",
+    Callback = function()
+    end
+})
+
+InfoTab:AddButton({
+    Name = "Infinite Yield",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end    
+})
+
+-- Main Tab
+local MainTab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Bear Tab
+local BearTab = Window:MakeTab({
+    Name = "Bear",
+    Icon = "rbxassetid://17868011535",
+    PremiumOnly = false
+})
+
+-- Survivor Tab
+local SurvivorTab = Window:MakeTab({
+    Name = "Survivor",
+    Icon = "rbxassetid://1249536826",
+    PremiumOnly = false
+})
+
+-- Badges Tab
+local BadgesTab = Window:MakeTab({
+    Name = "Badges",
+    Icon = "rbxassetid://24985816",
+    PremiumOnly = false
+})
+
+BadgesTab:AddButton({
+    Name = "Afrocity Code",
+    Callback = function()
+LocalPlayer = game.GetService(game, 'Players').LocalPlayer
+
+Code = ''
+Random = Random.new(LocalPlayer.UserId + 59102)
+
+for Morse = 1, 8 do
+Code = Code .. tostring(Random:NextInteger(0,9)) end
+
+setclipboard(Code)
+    end    
+})
+
+-- Puzzle ESP
+local puzzleESPEnabled = false
+local puzzleESPObjects = {}
+-- Add ESP to a part
+local function addPuzzleESP(part, color)
+	if part:FindFirstChild("PuzzleESP") then return end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "PuzzleESP"
+	highlight.FillColor = color
+  highlight.OutlineTransparency = 1
+	highlight.Parent = part
+
+	table.insert(puzzleESPObjects, highlight)
+end
+
+-- Remove all puzzle ESP
+local function clearPuzzleESP()
+	for _, esp in pairs(puzzleESPObjects) do
+		if esp and esp.Parent then
+			esp:Destroy()
+		end
+	end
+	table.clear(puzzleESPObjects)
+end
+
+-- Apply ESP to puzzles
+local function applyPuzzleESP()
+	local Map = workspace:FindFirstChild("Map")
+	if not Map then return end
+
+	-- Color Code
+	local ColorCode = Map:FindFirstChild("ColorCode")
+	if ColorCode then
+		if ColorCode:FindFirstChild("Base") then
+			addPuzzleESP(ColorCode.Base, Color3.fromRGB(0, 255, 255))
+		end
+
+		local codePos = ColorCode:FindFirstChild("CodePositions")
+		if codePos and codePos:FindFirstChild("Clue") then
+			addPuzzleESP(codePos.Clue, Color3.fromRGB(0, 255, 255))
+codePos.Clue.Transparency = 0
+		end
+	end
+
+	-- Cheese Altar
+	local Altar = Map:FindFirstChild("CheeseAltar")
+	if Altar then
+		if Altar:FindFirstChild("Base") then
+			addPuzzleESP(Altar.Base, Color3.fromRGB(255, 170, 0))
+		end
+
+		local Items = Altar:FindFirstChild("Items")
+		if Items then
+			addPuzzleESP(Items.Item, Color3.fromRGB(255, 170, 0))
+		end
+	end
+
+	-- Wire Puzzle
+	for _, wire in pairs(Map:GetChildren()) do
+		if wire.Name == "Wire" then
+			addPuzzleESP(wire, Color3.fromRGB(255, 0, 0))
+		end
+	end
+end
+SurvivorTab:AddToggle({
+	Name = "Puzzle ESP",
+	Default = false,
+	Callback = function(state)
+		puzzleESPEnabled = state
+
+		if state then
+			task.spawn(function()
+				while puzzleESPEnabled do
+					applyPuzzleESP()
+					task.wait(1)
+				end
+			end)
+		else
+			clearPuzzleESP()
+		end
+	end
+})
+
+-- Variables for hitbox modification
+local hitboxSizeValue = 10
+local hitboxExpanded = false
+
+-- Function to modify hitboxes
+local function modifyHitboxes(expand)
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character then
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                if expand then
+                    root.Size = Vector3.new(
+                        hitboxSizeValue,
+                        hitboxSizeValue,
+                        hitboxSizeValue
+                    )
+                    root.Transparency = 0.5
+                    root.CanCollide = false
+                else
+                    root.Size = Vector3.new(2, 2, 1)
+                    root.Transparency = 0
+                end
+            end
+        end
+    end
+end
+
+BearTab:AddTextbox({
+    Name = "Hitbox Size (min 3)",
+    Default = tostring(hitboxSizeValue),
+    TextDisappear = false,
+    Callback = function(text)
+        local value = tonumber(text)
+
+        if not value then
+            OrionLib:MakeNotification({
+                Name = "Hitbox",
+                Content = "Please enter a number",
+                Time = 3
+            })
+            return
+        end
+
+        -- clamp to minimum 3
+        value = math.max(3, math.floor(value))
+        hitboxSizeValue = value
+
+        -- re-apply if already enabled
+        if hitboxExpanded then
+            modifyHitboxes(true)
+        end
+    end
+})
+
+BearTab:AddToggle({
+    Name = "Hitbox Expand",
+    Default = false,
+    Callback = function(state)
+        hitboxExpanded = state
+        modifyHitboxes(hitboxExpanded)
+    end
+})
+
+local autoColorCodeEnabled = false
+local solving = false
+
+SurvivorTab:AddToggle({
+	Name = "Auto Color Code Puzzle",
+	Default = false,
+	Callback = function(state)
+		autoColorCodeEnabled = state
+
+		if state then
+			OrionLib:MakeNotification({
+				Name = "Color Code Puzzle",
+				Content = "Starting puzzle solver...",
+				Image = "rbxassetid://4483345998",
+				Time = 3
+			})
+
+			task.spawn(function()
+				-- Wait for new structure
+				local Map = workspace:WaitForChild("Map")
+				local ColorCode = Map:WaitForChild("ColorCode")
+
+				local ButtonsFolder = ColorCode
+					:WaitForChild("Base")
+					:WaitForChild("Buttons")
+
+				local ClueFrame = ColorCode
+					:WaitForChild("CodePositions")
+					:WaitForChild("Clue")
+					:WaitForChild("Note")
+					:WaitForChild("Frame")
+
+				solving = true
+
+				while autoColorCodeEnabled and solving do
+					for i = 1, 4 do
+						if not autoColorCodeEnabled then break end
+
+						local button = ButtonsFolder:FindFirstChild(tostring(i))
+						local clue = ClueFrame:FindFirstChild(tostring(i))
+
+						if button and clue then
+							local buttonLabel =
+								button:FindFirstChild("Note")
+								and button.Note:FindFirstChild("Label")
+
+							local clickDetector = button:FindFirstChildOfClass("ClickDetector")
+
+							if buttonLabel and clickDetector then
+								while autoColorCodeEnabled and buttonLabel.Text ~= clue.Text do
+									fireclickdetector(clickDetector)
+									task.wait(0.2)
+								end
+							end
+						end
+					end
+					task.wait(0.5)
+				end
+				solving = false
+			end)
+		else
+			solving = false
+		end
+	end
+})
+
+-- Bear Tab: Bring Survivors Toggle
+local bringSurvivorsEnabled = false
+BearTab:AddToggle({
+    Name = "Bring Survivors",
+    Default = false,
+    Callback = function(state)
+        bringSurvivorsEnabled = state
+        if bringSurvivorsEnabled then
+            spawn(function()
+                while bringSurvivorsEnabled do
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player.Team and player.Team.Name == "Survivors" and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            local rootPart = game.Players.LocalPlayer.Character.Torso
+                            player.Character:SetPrimaryPartCFrame(rootPart.CFrame + Vector3.new(0, 5, 0))
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+-- Survivor Tab: Auto Wire PuzzleToggle
+local survivorAutoPuzzleEnabled = false
+SurvivorTab:AddToggle({
+    Name = "Auto Wire Puzzle",
+    Default = false,
+    Callback = function(state)
+        survivorAutoPuzzleEnabled = state
+        if survivorAutoPuzzleEnabled then
+            spawn(function()
+    while survivorAutoPuzzleEnabled do
+        local Map = workspace:FindFirstChild("Map")
+        if not Map then task.wait(1) continue end
+
+        for _, wireModel in ipairs(Map:GetChildren()) do
+            if not survivorAutoPuzzleEnabled then break end
+            if wireModel.Name ~= "Wire" then continue end
+
+            local wiresFolder = wireModel:FindFirstChild("Wires")
+            if not wiresFolder then continue end
+
+            for _, wirePart in ipairs(wiresFolder:GetChildren()) do
+                if not survivorAutoPuzzleEnabled then break end
+                if not wirePart:IsA("BasePart") then continue end
+
+                local clickDetector = wirePart:FindFirstChildOfClass("ClickDetector")
+                if not clickDetector then continue end
+
+                local startColor = wirePart.Color
+
+                -- Click until the wire changes color
+                local safety = 0
+                while survivorAutoPuzzleEnabled
+                    and wirePart.Parent
+                    and wirePart.Color == startColor
+                    and safety < 20 do
+
+                    fireclickdetector(clickDetector)
+                    safety += 1
+                    task.wait(0.15)
+                end
+            end
+        end
+
+        task.wait(0.5)
+    end
+end)
+        end
+    end
+})
+
+-- Main Tab: Toggle ESP
+local espEnabled = false
+MainTab:AddToggle({
+    Name = "Toggle ESP",
+    Default = false,
+    Callback = function(state)
+        espEnabled = state
+        if espEnabled then
+            OrionLib:MakeNotification({
+                Name = "Toggle ESP",
+                Content = "ESP Enabled",
+                Image = "rbxassetid://4483345998",
+                Time = 5
+            })
+            spawn(function()
+                while espEnabled do
+                    for _, p in pairs(game.Players:GetPlayers()) do
+                        if p ~= game.Players.LocalPlayer and p.Character and not p.Character:FindFirstChild("ESPBox") then
+                            local box = Instance.new("BoxHandleAdornment")
+                            box.Name = "ESPBox"
+                            box.Adornee = p.Character
+                            box.Size = Vector3.new(4, 6, 4)
+                            box.Color3 = p.TeamColor.Color
+                            box.AlwaysOnTop = true
+                            box.ZIndex = 10
+                            box.Transparency = 0.5
+                            box.Parent = p.Character
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        else
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("ESPBox") then
+                    p.Character.ESPBox:Destroy()
+                end
+            end
+            OrionLib:MakeNotification({
+                Name = "Toggle ESP",
+                Content = "ESP Disabled",
+                Image = "rbxassetid://4483345998",
+                Time = 5
+            })
+        end
+    end
+})
+
+local infStaminaEnabled = false
+
+SurvivorTab:AddToggle({
+    Name = "Infinite Stamina",
+    Default = false,
+    Callback = function(state)
+        infStaminaEnabled = state
+
+        if state then
+            task.spawn(function()
+                local sprintModule
+
+                for _, v in ipairs(getloadedmodules()) do
+                    local ok, mod = pcall(require, v)
+
+                    if ok and type(mod) == "table" then
+                        if rawget(mod, "Current")
+                        and rawget(mod, "SprintAction")
+                        and rawget(mod, "SprintStats") then
+                            sprintModule = mod
+                            break
+                        end
+                    end
+                end
+
+                if not sprintModule then
+                    OrionLib:MakeNotification({
+                        Name = "Infinite Stamina",
+                        Content = "Sprint module not found",
+                        Time = 3
+                    })
+                    return
+                end
+
+                while infStaminaEnabled do
+                    pcall(function()
+                        sprintModule.Current.Value =
+                            sprintModule.SprintStats.Stamina.Max
+                    end)
+
+                    task.wait(1)
+                end
+            end)
+            })
+        end
+    end
+})
+
+-- Initialize the GUI
+OrionLib:Init()
