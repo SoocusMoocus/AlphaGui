@@ -1,7 +1,7 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/SoocusMoocus/AlphaGui/refs/heads/main/OrionLoader')))()
 
 local Window = OrionLib:MakeWindow({
-    Name = "Alpha Gui V10 🎃",
+    Name = "Alpha Gui V11",
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "AlphaGui"
@@ -26,10 +26,9 @@ InfoTab:AddButton({
 })
 
 InfoTab:AddButton({
-    Name = "Infinite Yield",
+    Name = "Last Updated on 24.11",
     Callback = function()
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
-    end    
+    end
 })
 
 InfoTab:AddButton({
@@ -78,6 +77,177 @@ local PluginsTab = Window:MakeTab({
     Name = "Plugins",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
+})
+
+MainTab:AddButton({
+    Name = "Infinite Yield",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end    
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+
+local lplr = Players.LocalPlayer
+
+local targetPart = workspace.Lobby._Obby.Quidz
+local AFKRemote = ReplicatedStorage
+    :WaitForChild("_Remotes")
+    :WaitForChild("RE/AFK_Toggle")
+
+local teleportCFrame = CFrame.new(
+    407.588989, 52.5979233, -28.9725761,
+    -0.139009118, 6.21292671e-08, -0.990291119,
+    -1.54991433e-08, 1, 6.49140333e-08,
+    0.990291119, 2.43723051e-08, -0.139009118
+)
+
+local touchInterval = 1 / 60
+local lastTouchTime = 0
+
+local obbyEnabled = false
+local farmConnection = nil
+local farmCharacter = nil
+
+lplr.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new(0, 0))
+end)
+
+local function stopFarm()
+    if farmConnection then
+        farmConnection:Disconnect()
+        farmConnection = nil
+    end
+
+    farmCharacter = nil
+end
+
+local function startFarm(character)
+    stopFarm()
+
+    if not obbyEnabled then return end
+
+    local humanoid = character:WaitForChild("Humanoid")
+    local hrp = humano:WaitForChild("HumanoidRootPart")
+
+    hrp.CFrame = teleportCFrame
+    farmCharacter = character
+
+    farmConnection = RunService.Heartbeat:Connect(function()
+        if not obbyEnabled or lplr.Character ~= character then
+            stopFarm()
+            return
+        end
+
+        if humanoid.Health <= 0 then
+            stopFarm()
+            return
+        end
+
+        hrp.CFrame = teleportCFrame
+
+        local now = os.clock()
+
+        if now - lastTouchTime >= touchInterval then
+            lastTouchTime = now
+
+            local touchPart =
+                character:FindFirstChild("LeftFoot")
+                or character:FindFirstChild("LeftLeg")
+                or hrp
+
+            if touchPart and targetPart then
+                firetouchinterest(targetPart, touchPart, 0)
+                task.wait()
+                firetouchinterest(targetPart, touchPart, 1)
+            end
+        end
+    end)
+end
+
+local function checkObby()
+    if not obbyEnabled then return end
+
+    if not lplr.Team or lplr.Team.Name ~= "Waiting" then
+        stopFarm()
+        return
+    end
+
+    local character = lplr.Character
+    if not character then return end
+
+    local afkLabel = character:FindFirstChild("_AFKLabel")
+
+    if not afkLabel then
+        stopFarm()
+        AFKRemote:FireServer(false)
+        return
+    end
+
+    if not afkLabel:IsA("BillboardGui") or not afkLabel.Enabled then
+        stopFarm()
+        return
+    end
+
+    if farmCharacter ~= character or not farmConnection then
+        startFarm(character)
+    end
+end
+
+MainTab:AddToggle({
+    Name = "Obby Auto Farm (SAFE)",
+    Default = false,
+
+    Callback = function(state)
+        obbyEnabled = state
+
+        if not state then
+            stopFarm()
+            return
+        end
+
+        task.spawn(function()
+            while obbyEnabled do
+                checkObby()
+                task.wait(0.5)
+            end
+
+            stopFarm()
+        end)
+    end
+})
+
+lplr.CharacterRemoving:Connect(function()
+    stopFarm()
+end)
+
+local Lighting = game:GetService("Lighting")
+local fullbrightConnection
+
+MainTab:AddToggle({
+    Name = "Auto Fullbright",
+    Default = false,
+    Callback = function(state)
+        if state then
+            Lighting.ClockTime = 14
+            Lighting.Brightness = 5
+
+            fullbrightConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+                Lighting.ClockTime = 14
+                Lighting.Brightness = 5
+                Lighting.FogEnd = 100000
+            end)
+        else
+            if fullbrightConnection then
+                fullbrightConnection:Disconnect()
+                fullbrightConnection = nil
+            end
+        end
+    end
 })
 
 BadgesTab:AddButton({
@@ -612,26 +782,6 @@ local function touchEventPart(modelName)
         end
     end
 end
-
-EventTab:AddToggle({
-    Name = "Auto Ghost (OP Kinda)",
-    Default = false,
-    Callback = function(state)
-        eventTouchEnabled = state
-        
-        if state then
-            eventConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                touchEventPart("Pink")
-                touchEventPart("Orange")
-            end)
-        else
-            if eventConnection then
-                eventConnection:Disconnect()
-                eventConnection = nil
-            end
-        end
-    end
-})
 
 PluginsTab:AddButton({
     Name = "For info go to our discord in info",
