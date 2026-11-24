@@ -132,7 +132,7 @@ local function startFarm(character)
     if not obbyEnabled then return end
 
     local humanoid = character:WaitForChild("Humanoid")
-    local hrp = humano:WaitForChild("HumanoidRootPart")
+    local hrp = character:WaitForChild("HumanoidRootPart")
 
     hrp.CFrame = teleportCFrame
     farmCharacter = character
